@@ -24,8 +24,8 @@
 #' IPI(stations, phab)
 IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
-    # explicitly declare certain fields to be what they need to be. For sake of python compatibility.
-    phab <- phab %>% 
+  # explicitly declare certain fields to be what they need to be. For sake of python compatibility.
+  phab <- phab %>% 
     dplyr::mutate(
       StationCode = as.character(StationCode),
       SampleDate = as.character(SampleDate),
@@ -35,7 +35,7 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
       Count_Calc = as.integer(Count_Calc)
       )
   
-    stations <- stations %>% 
+  stations <- stations %>% 
     dplyr::mutate(
       StationCode = as.character(StationCode),
       MAX_ELEV = as.integer(MAX_ELEV),
@@ -79,8 +79,6 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
 
   #Assemble phab output
   phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
-  print(head(phab.scores))
-  print(str(phab.scores))
   #Ev_FlowHab: Unmodeled decreaser
   phab.scores$Ev_FlowHab_pred<-NA
   phab.scores$Ev_FlowHab_score<-  (phab.scores$Ev_FlowHab - 0.025)/(0.95  - 0.025)

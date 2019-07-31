@@ -1,10 +1,7 @@
 ---
-output:
-  html_document:
-    keep_md: yes
-    toc: no
-    self_contained: no
+output: github_document
 ---
+
 # PHAB
 
 #### *Marcus W. Beck, marcusb@sccwrp.org, Raphael D. Mazor, raphaelm@sccwrp.org, Andrew C. Rehn, andy.rehn@wildlife.ca.gov*
@@ -90,6 +87,7 @@ The `phab` data include calculated physical habitat metrics that are compiled al
 
 * `StationCode` unique station identifier
 * `SampleDate` date of the sample
+* `SampleAgencyCode` the sample agency code that collected the data
 * `Variable` name of the PHAB metric
 * `Result` resulting metric value
 * `Count_Calc` number of unique observations that were used to estimate the value in `Result` 
