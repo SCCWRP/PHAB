@@ -23,7 +23,7 @@
 #' @examples
 #' IPI(stations, phab)
 IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
-  
+  print("start of IPI function")  
   # explicitly declare certain fields to be what they need to be. For sake of python compatibility.
   phab <- phab %>% 
     dplyr::mutate(
@@ -49,7 +49,12 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
       MINP_WS = as.numeric(MINP_WS),
       PPT_00_09 = as.numeric(PPT_00_09)
       )
-  
+  print("phab dataframe")
+  print(head(phab))
+
+  print("stations dataframe")
+  print(head(stations))  
+
   # sanity checks
   chkinp(stations, phab, qa = qa, allerr = allerr, log = log)
  
@@ -64,6 +69,9 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
                   "PCT_POOL","XFC_ALG","PCT_RC")
   phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "SampleAgencyCode", "PHAB_SampleID", "Variable","Result","Count_Calc")]
   
+  print("phab dataframe after fitering")
+  print(head(phab))
+
   # What are the required predictors?
   preds.req<-unique(c(row.names(H_AqHab$importance),row.names(XCMG$importance),row.names(PCT_SAFN$importance)))
   field.preds.req<-c("XSLOPE","XBKF_W")
@@ -73,9 +81,15 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   phab.preds<-phab[which(phab$Variable %in% field.preds.req),]
   phab.preds<-dcast(phab.preds, StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
   
+  print("Field predictors")
+  print(head(phab.preds))
+
   ##########
   #Assemble predictor matrix
   preds<-merge(phab.preds, unique(stations[c("StationCode",gis.preds.req)]))
+
+  print("predictor matrix")
+  print(head(preds))
 
   #Assemble phab output
   phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
