@@ -98,7 +98,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   # check phab fields are present
   
-  phafld <- c('StationCode', 'SampleDate', 'SampleAgencyCode', 'Variable', 'Result', 'Count_Calc')
+  phafld <- c('StationCode', 'SampleDate', 'Variable', 'Result', 'Count_Calc')
   chk <- phafld %in% names(phab)
   if(any(!chk)){
     
@@ -129,7 +129,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   if(nrow(chk) > 0){
     
-    stadts <- paste0(chk$StationCode, ', ', chk$SampleDate, ', ', chk$SampleAgencyCode, ': ') 
+    stadts <- paste0(chk$StationCode, ', ', chk$SampleDate, ': ') 
     misvar <- map(chk$misvar, ~ paste(.x, collapse = ', ')) %>% unlist
     misall <- paste(stadts, misvar) %>% paste(collapse = '\n')
     
@@ -145,9 +145,9 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   # check for duplicate phab variables by station, sample date, sampleagencycode
   
   chk <- phab %>% 
-    select(StationCode, SampleDate, SampleAgencyCode, Variable) %>% 
+    select(StationCode, SampleDate, Variable) %>% 
     unique %>% 
-    group_by(StationCode, SampleDate, SampleAgencyCode) %>%
+    group_by(StationCode, SampleDate) %>%
     nest %>% 
     mutate(
       dupvar = map(data, ~ .x$Variable[duplicated(.x$Variable)])
@@ -155,8 +155,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     filter(map(dupvar, ~ length(.x) > 0) %>% unlist)
   
   if(nrow(chk) > 0){
-    
-    stadts <- paste0(chk$StationCode, ', ', chk$SampleDate, ', ', chk$SampleAgencyCode, ': ') 
+    stadts <- paste0(chk$StationCode, ', ', chk$SampleDate, ': ') 
     dupvar <- map(chk$dupvar, ~ paste(.x, collapse = ', ')) %>% unlist
     dupall <- paste(stadts, dupvar) %>% paste(collapse = '\n\n')
 

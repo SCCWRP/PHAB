@@ -23,17 +23,24 @@
 #' @examples
 #' IPI(stations, phab)
 IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
-  print("start of IPI function")  
-  # explicitly declare certain fields to be what they need to be. For sake of python compatibility.
+  
+  # sanity checks
+  chkinp(stations, phab, qa = qa, allerr = allerr, log = log)
+ 
+  # explicitly declare certain fields to be what they need to be.
   phab <- phab %>% 
     dplyr::mutate(
       StationCode = as.character(StationCode),
       SampleDate = as.character(SampleDate),
-      SampleAgencyCode = as.character(SampleAgencyCode),
       Variable = as.character(Variable),
       Result = as.numeric(Result),
       Count_Calc = as.integer(Count_Calc)
-      )
+    )
+  
+  # SampleAgencyCode is not required.  
+  if("SampleAgencyCode" %in% names(phab)) {
+    phab <- phab %>% dplyr::mutate(SampleAgencyCode = as.character(SampleAgencyCode))
+  }
   
   stations <- stations %>% 
     dplyr::mutate(
@@ -48,18 +55,15 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
       New_Lat = as.numeric(New_Lat),
       MINP_WS = as.numeric(MINP_WS),
       PPT_00_09 = as.numeric(PPT_00_09)
-      )
-  print("phab dataframe")
-  print(head(phab))
-
-  print("stations dataframe")
-  print(head(stations))  
-
-  # sanity checks
-  chkinp(stations, phab, qa = qa, allerr = allerr, log = log)
- 
+    )
+  
+  
   # append unique SampleID
-  phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, phab$SampleAgencyCode, sep="_")
+  if ("SampleAgencyCode" %in% names(phab)) {
+    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, phab$SampleAgencyCode, sep="|")
+  } else {
+    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, sep="|")
+  }
   
   # sel.metrics
   sel.metrics<-c("Ev_FlowHab", "H_AqHab", "XCMG", "H_SubNat", "PCT_SAFN")
@@ -67,11 +71,11 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   # subset phab by required metrics
   all.req.phab<-c("XSLOPE","XBKF_W", "H_AqHab","PCT_SAFN","XCMG","Ev_FlowHab","H_SubNat","XC",
                   "PCT_POOL","XFC_ALG","PCT_RC")
-  phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "SampleAgencyCode", "PHAB_SampleID", "Variable","Result","Count_Calc")]
-  
-  print("phab dataframe after fitering")
-  print(head(phab))
-
+  if ("SampleAgencyCode" %in% names(phab)) {
+    phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "SampleAgencyCode", "PHAB_SampleID", "Variable","Result","Count_Calc")]
+  } else{
+    phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "PHAB_SampleID", "Variable","Result","Count_Calc")]    
+  }
   # What are the required predictors?
   preds.req<-unique(c(row.names(H_AqHab$importance),row.names(XCMG$importance),row.names(PCT_SAFN$importance)))
   field.preds.req<-c("XSLOPE","XBKF_W")
@@ -79,7 +83,11 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   # Field predictors
   phab.preds<-phab[which(phab$Variable %in% field.preds.req),]
-  phab.preds<-dcast(phab.preds, StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  if ("SampleAgencyCode" %in% names(phab)) {
+    phab.preds<-dcast(phab.preds, StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  } else {
+    phab.preds<-dcast(phab.preds, StationCode+SampleDate+PHAB_SampleID~Variable, value.var = "Result")
+  }
   
   print("Field predictors")
   print(head(phab.preds))
@@ -92,7 +100,11 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   print(head(preds))
 
   #Assemble phab output
-  phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  if ("SampleAgencyCode" %in% names(phab)) {
+    phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  } else {
+    phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+PHAB_SampleID~Variable, value.var = "Result")
+  }
   #Ev_FlowHab: Unmodeled decreaser
   phab.scores$Ev_FlowHab_pred<-NA
   phab.scores$Ev_FlowHab_score<-  (phab.scores$Ev_FlowHab - 0.025)/(0.95  - 0.025)
