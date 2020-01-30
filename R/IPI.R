@@ -60,9 +60,9 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   # append unique SampleID
   if ("SampleAgencyCode" %in% names(phab)) {
-    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, phab$SampleAgencyCode, sep="|")
+    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, phab$SampleAgencyCode, sep="_")
   } else {
-    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, sep="|")
+    phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, sep="_")
   }
   
   # sel.metrics
@@ -147,19 +147,36 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   phab.scores$IPI_percentile<-round(pnorm(q=phab.scores$IPI, mean=1, sd=0.123),2)
   
   # round results to two decimals
-  phab.scores <- phab.scores %>% 
-    gather('var', 'val', -StationCode, -SampleDate, -SampleAgencyCode, -PHAB_SampleID) %>% 
-    mutate(val = round(val, 2)) %>% 
-    spread(var, val)
+  if ("SampleAgencyCode" %in% names(phab)) {
+    phab.scores <- phab.scores %>% 
+      gather('var', 'val', -StationCode, -SampleDate, -SampleAgencyCode, -PHAB_SampleID) %>% 
+      mutate(val = round(val, 2)) %>% 
+      spread(var, val)
+  } else {
+    phab.scores <- phab.scores %>% 
+      gather('var', 'val', -StationCode, -SampleDate, -PHAB_SampleID) %>% 
+      mutate(val = round(val, 2)) %>% 
+      spread(var, val)
+  }
 
   #Combine metrics and qa in a single report, with columns in a better order
-  report<- phab.scores[,c("StationCode","SampleDate","SampleAgencyCode","PHAB_SampleID",
+  if ("SampleAgencyCode" %in% names(phab)) {
+    report<- phab.scores[,c("StationCode","SampleDate","SampleAgencyCode","PHAB_SampleID",
                           "IPI","IPI_percentile",
                           "Ev_FlowHab","Ev_FlowHab_score",
                           "H_AqHab","H_AqHab_pred","H_AqHab_score",
                           "H_SubNat","H_SubNat_score",
                           "PCT_SAFN","PCT_RC", "PCT_SAFN_pred","PCT_SAFN_score",
                           "XCMG","XCMG_pred","XCMG_score")]
+  } else {
+    report<- phab.scores[,c("StationCode","SampleDate","PHAB_SampleID",
+                            "IPI","IPI_percentile",
+                            "Ev_FlowHab","Ev_FlowHab_score",
+                            "H_AqHab","H_AqHab_pred","H_AqHab_score",
+                            "H_SubNat","H_SubNat_score",
+                            "PCT_SAFN","PCT_RC", "PCT_SAFN_pred","PCT_SAFN_score",
+                            "XCMG","XCMG_pred","XCMG_score")]
+  }
   
   #Calculate the QA for each metric
   if(qa){

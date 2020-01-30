@@ -115,9 +115,9 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   phavar <- c('XSLOPE', 'XBKF_W', 'H_AqHab', 'PCT_SAFN', 'XCMG', 'Ev_FlowHab', 'H_SubNat', 'PCT_RC')
   chk <- phab %>% 
-    select(StationCode, SampleDate, SampleAgencyCode, Variable) %>% 
+    select(StationCode, SampleDate, Variable) %>% 
     unique %>% 
-    group_by(StationCode, SampleDate, SampleAgencyCode) %>%
+    group_by(StationCode, SampleDate) %>%
     nest %>% 
     mutate(
       misvar = map(data, ~ phavar[phavar %in% .x$Variable]),
@@ -142,7 +142,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   }
   
   ##
-  # check for duplicate phab variables by station, sample date, sampleagencycode
+  # check for duplicate phab variables by station, sample date
   
   chk <- phab %>% 
     select(StationCode, SampleDate, Variable) %>% 
