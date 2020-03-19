@@ -50,6 +50,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     
   }
   
+  
   ##
   # check that stations in stations match stations in phab
   
@@ -57,10 +58,12 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   if(length(chk) > 0){
     
     msg <- paste0('station ', paste(chk, collapse = ', '), ' from stations not in phab')
-    errs <- c(errs, msg)
+    # errs <- c(errs, msg)
+    stations <- stations %>% 
+      filter(StationCode %in% phab$StationCode)
     
-    if(!allerr)
-      stop(msg, call. = FALSE)
+    if(allerr)
+      warning(msg, call. = F)
   
   }
   
@@ -71,12 +74,19 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   if(length(chk) > 0){ 
     
     msg <- paste0('station ', paste(chk, collapse = ', '), ' from phab not in stations')
-    errs <- c(errs, msg)
+    # errs <- c(errs, msg)
+    phab <- phab %>% 
+      filter(StationCode %in% stations$StationCode)
+
     
-    if(!allerr)
-      stop(msg, call. = FALSE)
+    if(allerr)
+      warning(msg, call. = FALSE)
     
   }
+  
+
+
+
   
   ##
   # check station fields are present
