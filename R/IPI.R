@@ -10,7 +10,7 @@
 #' 
 #' @return A results \code{data.frame} of IPI and metric scores, quality assurance results are returned if \code{qa = TRUE} (default)
 #' 
-#' @importFrom dplyr mutate
+#' @importFrom dplyr mutate select
 #' @importFrom magrittr "%>%"
 #' @importFrom plyr ddply join summarize
 #' @importFrom reshape2 dcast
@@ -25,6 +25,7 @@
 IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   # explicitly declare certain fields to be what they need to be. For sake of python compatibility.
+  # explicitly select needed fileds, for sake of checking input and creating lines with NA value when missing
   phab <- phab %>% 
     dplyr::mutate(
       StationCode = as.character(StationCode),
@@ -33,7 +34,15 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
       Variable = as.character(Variable),
       Result = as.numeric(Result),
       Count_Calc = as.integer(Count_Calc)
-      )
+      ) %>% 
+    dplyr::select(
+      StationCode,
+      SampleDate,
+      SampleAgencyCode,
+      Variable,
+      Result,
+      Count_Calc
+    )
   
   stations <- stations %>% 
     dplyr::mutate(
@@ -48,10 +57,25 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
       New_Lat = as.numeric(New_Lat),
       MINP_WS = as.numeric(MINP_WS),
       PPT_00_09 = as.numeric(PPT_00_09)
-      )
+      ) %>% 
+    dplyr::select(
+      StationCode,
+      MAX_ELEV,
+      AREA_SQKM,
+      ELEV_RANGE,
+      MEANP_WS,
+      New_Long,
+      SITE_ELEV,
+      KFCT_AVE,
+      New_Lat,
+      MINP_WS,
+      PPT_00_09
+    )
   
   # sanity checks
-  chkinp(stations, phab, qa = qa, allerr = allerr, log = log)
+  checkk <- chkinp(stations, phab, qa = qa, allerr = allerr, log = log)
+  phab <- checkk$phab
+  stations <- checkk$stations
  
   # append unique SampleID
   phab$PHAB_SampleID<-paste(phab$StationCode, phab$SampleDate, phab$SampleAgencyCode, sep="_")
@@ -60,9 +84,10 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   sel.metrics<-c("Ev_FlowHab", "H_AqHab", "XCMG", "H_SubNat", "PCT_SAFN")
 
   # subset phab by required metrics
-  all.req.phab<-c("XSLOPE","XBKF_W", "H_AqHab","PCT_SAFN","XCMG","Ev_FlowHab","H_SubNat","XC",
-                  "PCT_POOL","XFC_ALG","PCT_RC")
-  phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "SampleAgencyCode", "PHAB_SampleID", "Variable","Result","Count_Calc")]
+  all.req.phab<-c("XSLOPE","XBKF_W", "H_AqHab","PCT_SAFN","XCMG",
+                  "Ev_FlowHab","H_SubNat","XC","PCT_POOL","XFC_ALG","PCT_RC")
+  phab<-phab[which(phab$Variable %in% all.req.phab),c("StationCode","SampleDate", "SampleAgencyCode", 
+                                                      "PHAB_SampleID", "Variable","Result","Count_Calc")]
   
   # What are the required predictors?
   preds.req<-unique(c(row.names(H_AqHab$importance),row.names(XCMG$importance),row.names(PCT_SAFN$importance)))
@@ -71,14 +96,16 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   # Field predictors
   phab.preds<-phab[which(phab$Variable %in% field.preds.req),]
-  phab.preds<-dcast(phab.preds, StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  phab.preds<-dcast(phab.preds, StationCode + SampleDate + 
+                      SampleAgencyCode + PHAB_SampleID ~ Variable, value.var = "Result")
   
   ##########
   #Assemble predictor matrix
   preds<-merge(phab.preds, unique(stations[c("StationCode",gis.preds.req)]))
 
   #Assemble phab output
-  phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],StationCode+SampleDate+SampleAgencyCode+PHAB_SampleID~Variable, value.var = "Result")
+  phab.scores<-dcast(phab[which(phab$Variable %in% c(sel.metrics,"PCT_RC")),],
+                     StationCode + SampleDate + SampleAgencyCode + PHAB_SampleID ~ Variable, value.var = "Result")
   #Ev_FlowHab: Unmodeled decreaser
   phab.scores$Ev_FlowHab_pred<-NA
   phab.scores$Ev_FlowHab_score<-  (phab.scores$Ev_FlowHab - 0.025)/(0.95  - 0.025)
@@ -116,7 +143,8 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   phab.scores$H_AqHab_score[which(phab.scores$H_AqHab_score<0)]<-0
   
   #Calculate overall index
-  phab.scores$IPI_raw<-  rowMeans(phab.scores[,c("Ev_FlowHab_score","H_SubNat_score","PCT_SAFN_score","XCMG_score","XCMG_score","H_AqHab_score")])
+  phab.scores$IPI_raw<-  rowMeans(phab.scores[,c("Ev_FlowHab_score","H_SubNat_score",
+                                                 "PCT_SAFN_score","XCMG_score","XCMG_score","H_AqHab_score")])
   phab.scores$IPI<-phab.scores$IPI_raw/0.761
   phab.scores$IPI_percentile<-round(pnorm(q=phab.scores$IPI, mean=1, sd=0.123),2)
   
@@ -138,8 +166,8 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   #Calculate the QA for each metric
   if(qa){
     
-    phab.qa2<-
-      ddply(phab, ~PHAB_SampleID, summarize,
+    phab.qa2 <-
+      plyr::ddply(phab, ~PHAB_SampleID, summarize,
             Ev_FlowHab_qa=round(mean(Count_Calc[which(Variable=="PCT_POOL")])/10,2),
             H_AqHab_qa=round(mean(Count_Calc[which(Variable=="XFC_ALG")])/11,2),
             H_SubNat_qa=round(mean(Count_Calc[which(Variable=="PCT_RC")])/105,2),
@@ -152,8 +180,9 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     phab.qa2$IPI_qa<-apply(phab.qa2[,2:6], 1, min)
     
     # arrange columns, add to output
-    phab.qa2 <- phab.qa2[, c('PHAB_SampleID', 'IPI_qa', 'Ev_FlowHab_qa', 'H_AqHab_qa', 'H_SubNat_qa', 'PCT_SAFN_qa', 'XCMG_qa')]
-    report<-suppressMessages(join(report, phab.qa2))
+    phab.qa2 <- phab.qa2[, c('PHAB_SampleID', 'IPI_qa', 'Ev_FlowHab_qa', 
+                             'H_AqHab_qa', 'H_SubNat_qa', 'PCT_SAFN_qa', 'XCMG_qa')]
+    report<-suppressMessages(plyr::join(report, phab.qa2))
     
   }
 
