@@ -29,6 +29,10 @@ IPI <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
  
   # explicitly declare certain fields to be what they need to be.
   phab <- phab %>% 
+    dplyr::filter(
+      Variable %in% c("XSLOPE","XBKF_W", "H_AqHab","PCT_SAFN","XCMG","Ev_FlowHab","H_SubNat","XC",
+                  "PCT_POOL","XFC_ALG","PCT_RC")
+    ) %>% 
     dplyr::mutate(
       StationCode = as.character(StationCode),
       SampleDate = as.character(SampleDate),
