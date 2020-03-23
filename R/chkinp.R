@@ -11,7 +11,7 @@
 #' 
 #' @return An error message is returned if the input data are not correctly formatted. If a dataset has multiple errors, only the first is returned.
 #' 
-#' @importFrom dplyr filter group_by mutate select
+#' @importFrom dplyr filter group_by mutate select 
 #' @importFrom magrittr "%>%"
 #' @importFrom tidyr gather nest
 #' @importFrom purrr map
@@ -50,6 +50,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     
   }
   
+  
   ##
   # check that stations in stations match stations in phab
   
@@ -57,10 +58,12 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   if(length(chk) > 0){
     
     msg <- paste0('station ', paste(chk, collapse = ', '), ' from stations not in phab')
-    errs <- c(errs, msg)
+    # errs <- c(errs, msg)
+    stations <- stations %>% 
+      filter(StationCode %in% phab$StationCode)
     
-    if(!allerr)
-      stop(msg, call. = FALSE)
+    if(allerr)
+      warning(msg, call. = F)
   
   }
   
@@ -71,12 +74,19 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   if(length(chk) > 0){ 
     
     msg <- paste0('station ', paste(chk, collapse = ', '), ' from phab not in stations')
-    errs <- c(errs, msg)
+    # errs <- c(errs, msg)
+    phab <- phab %>% 
+      filter(StationCode %in% stations$StationCode)
+
     
-    if(!allerr)
-      stop(msg, call. = FALSE)
+    if(allerr)
+      warning(msg, call. = FALSE)
     
   }
+  
+
+
+
   
   ##
   # check station fields are present
@@ -134,11 +144,19 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     misall <- paste(stadts, misvar) %>% paste(collapse = '\n')
     
     msg <- paste0('Required PHAB variables not present:\n\n', misall)
-    errs <- c(errs, msg)
+    # errs <- c(errs, msg)
     
-    if(!allerr)
-      stop(msg, call. = FALSE)
-    
+    if(allerr)
+      warning(msg, call. = FALSE)
+      
+    phab <- phab %>% 
+      bind_rows(
+        chk %>% 
+          select(-data) %>% 
+          unnest(cols = c(misvar)) %>% 
+          mutate(Result = NA_real_, Count_Calc = NA_real_) %>% 
+          rename(Variable = misvar)
+      )
   }
   
   ##
@@ -246,6 +264,6 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
     
   }
   
-  return()
+  return(list(phab = phab, stations = stations))
   
 }
