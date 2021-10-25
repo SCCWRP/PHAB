@@ -561,3 +561,7 @@ checks are made:
 The `IPI()` function will print informative messages to the R console if
 any of these errors are encountered. It is the responsibility of the
 analyst to correct any errors in the raw data before proceeding.
+
+### Metadata
+Resources: <a href="https://www.waterboards.ca.gov/water_issues/programs/swamp/bioassessment/docs/20201220_consolidated_sop.pdf">SOP</a>, <a href="https://www.waterboards.ca.gov/water_issues/programs/swamp/bioassessment/docs/physical_habitat_index_technical_memo.pdf">Technical memo</a><br>
+Contact: <a href="https://www.sccwrp.org/about/staff/raphael-mazor/">Raphael Mazor</a>, <a href="https://www.sccwrp.org/about/staff/robert-butler/">Robert Butler</a><br>
