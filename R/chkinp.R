@@ -115,6 +115,7 @@ chkinp <- function(stations, phab, qa = TRUE, allerr = TRUE, log = FALSE){
   
   phavar <- c('XSLOPE', 'XBKF_W', 'H_AqHab', 'PCT_SAFN', 'XCMG', 'Ev_FlowHab', 'H_SubNat', 'PCT_RC')
   chk <- phab %>% 
+    filter(!is.na(Result)) %>% # sometimes the variable is present, but with an NA value. This also does not work - Robert March 13, 2023
     select(StationCode, SampleDate, SampleAgencyCode, Variable) %>% 
     unique %>% 
     group_by(StationCode, SampleDate, SampleAgencyCode) %>%
